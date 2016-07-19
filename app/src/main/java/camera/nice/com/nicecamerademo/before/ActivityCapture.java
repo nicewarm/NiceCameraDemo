@@ -68,6 +68,8 @@ public class ActivityCapture extends Activity implements
     public static final String kCropWidth = "crop_width";
     public static final String kCropHeight = "crop_height";
 
+    public static final int kBeforeCameraCode = 1024;
+
     private Camera.ShutterCallback _shutterCallback = new Camera.ShutterCallback() {
         @Override
         public void onShutter() {

@@ -2,6 +2,7 @@ package camera.nice.com.nicecamerademo;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.net.Uri;
@@ -32,6 +33,10 @@ public class CameraActivity extends Activity {
 
     private CameraPreview mPreview;
 
+    public static final String kPhotoPath = "photo_path";
+
+    public static final int kCameraCode = 1023;
+
 
     @Override
 
@@ -40,7 +45,7 @@ public class CameraActivity extends Activity {
         setContentView(R.layout.activity_camera);
         mCamera = getCameraInstance();
         Camera.Parameters parameters = mCamera.getParameters();
-        if (parameters.getMaxNumFocusAreas()>0){
+        if (parameters.getMaxNumFocusAreas() > 0) {
 
         }
         if (mCamera == null) {
@@ -98,7 +103,7 @@ public class CameraActivity extends Activity {
             c = Camera.open(); // attempt to get a Camera instance
         } catch (Exception e) {
             // Camera is not available (in use or does not exist)
-            Log.d("nice_camera",e.getMessage());
+            Log.d("nice_camera", e.getMessage());
         }
         return c; // returns null if camera is unavailable
     }
@@ -115,15 +120,14 @@ public class CameraActivity extends Activity {
                 Log.d(TAG, "Error creating media file, check storage permissions: ");
                 return;
             }
-
             try {
-
                 FileOutputStream fos = new FileOutputStream(pictureFile);
-
                 fos.write(data);
-
                 fos.close();
-
+                Intent intent = new Intent();
+                intent.putExtra(kPhotoPath, pictureFile.getAbsolutePath());
+                CameraActivity.this.setResult(RESULT_OK, intent);
+                CameraActivity.this.finish();
             } catch (FileNotFoundException e) {
                 Log.d(TAG, "File not found: " + e.getMessage());
             } catch (IOException e) {
@@ -155,64 +159,30 @@ public class CameraActivity extends Activity {
      */
 
     private static File getOutputMediaFile(int type) {
-
         // To be safe, you should check that the SDCard is mounted
-
         // using Environment.getExternalStorageState() before doing this.
-
-
-        File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-
-                Environment.DIRECTORY_PICTURES), "MyCameraApp");
-
+        File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "MyCameraApp");
         // This location works best if you want the created images to be shared
-
         // between applications and persist after your app has been uninstalled.
-
-
         // Create the storage directory if it does not exist
-
         if (!mediaStorageDir.exists()) {
-
             if (!mediaStorageDir.mkdirs()) {
-
                 Log.d("MyCameraApp", "failed to create directory");
-
                 return null;
-
             }
-
         }
-
-
         // Create a media file name
-
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-
         File mediaFile;
-
         if (type == MEDIA_TYPE_IMAGE) {
-
             mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-
                     "IMG_" + timeStamp + ".jpg");
-
         } else if (type == MEDIA_TYPE_VIDEO) {
-
             mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-
                     "VID_" + timeStamp + ".mp4");
-
         } else {
-
             return null;
-
         }
-
-
         return mediaFile;
-
     }
-
-
 }

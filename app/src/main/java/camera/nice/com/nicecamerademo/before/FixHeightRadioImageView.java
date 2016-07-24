@@ -46,9 +46,9 @@ public class FixHeightRadioImageView extends ImageView {
 
 	@Override
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-		int heightSize = MeasureSpec.getSize(heightMeasureSpec);
-		width = heightSize;
-		height = (int) (width / radio);
+		int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+		width = widthSize;
+		height = (int) (width * radio);
 		setMeasuredDimension(width, height);
 	}
 }

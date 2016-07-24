@@ -12,6 +12,7 @@ import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.Size;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.OrientationEventListener;
 import android.view.Surface;
@@ -25,6 +26,8 @@ import android.widget.Toast;
 
 
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import camera.nice.com.nicecamerademo.R;
@@ -62,11 +65,10 @@ public class ActivityCapture extends Activity implements
     private Bitmap finalBitmap;
     private File photoFile;
 
-    private int cropWidth = 0;
-    private int cropHeight = 0;
+    private int cropWidth = 750;
+    private int cropHeight = 750;
+
     private boolean makeWaterMark;
-    public static final String kCropWidth = "crop_width";
-    public static final String kCropHeight = "crop_height";
 
     public static final int kBeforeCameraCode = 1024;
 
@@ -81,8 +83,6 @@ public class ActivityCapture extends Activity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        cropWidth = 750;
-        cropHeight = 750;
         observer = new CaptureSensorsObserver(this);
         _orientationEventListener = new CaptureOrientationEventListener(this);
         setContentView(R.layout.activity_capture);
@@ -106,12 +106,6 @@ public class ActivityCapture extends Activity implements
 
     protected void initViews() {
         showImage.setRadio(cropWidth / (cropHeight * 1.0f));
-        bnOpenLight.setRotation(-90);
-        save.setRotation(-90);
-        notSave.setRotation(-90);
-        showImage.setRotation(-90);
-        bnCapture.setRotation(-90);
-        bnToggleCamera.setRotation(-90);
     }
 
     protected void setListeners() {
@@ -133,34 +127,42 @@ public class ActivityCapture extends Activity implements
                     options.inJustDecodeBounds = false;
                     options.inPreferredConfig = Bitmap.Config.ARGB_8888;
                     //此处就把图片压缩了
-                    options.inSampleSize = Math.max(options.outWidth
-                            / kPhotoMaxSaveSideLen, options.outHeight
-                            / kPhotoMaxSaveSideLen);
+                    options.inSampleSize = Math.max(options.outWidth / kPhotoMaxSaveSideLen, options.outHeight / kPhotoMaxSaveSideLen);
                     bitmap = BitmapUtil.decodeByteArrayUnthrow(data, options);
 
                     if (null == bitmap) {
                         options.inSampleSize = Math.max(2, options.inSampleSize * 2);
                         bitmap = BitmapUtil.decodeByteArrayUnthrow(data, options);
                     }
+
                 } catch (Throwable e) {
+                    e.printStackTrace();
                 }
                 if (null == bitmap) {
                     Toast.makeText(ActivityCapture.this, "内存不足，保存照片失败！", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                //long start = System.currentTimeMillis();
-                Bitmap addBitmap = BitmapUtil.rotateAndScale(bitmap, _rotation, kPhotoMaxSaveSideLen, true);
-                finalBitmap = cropPhotoImage(addBitmap);
-                if (makeWaterMark) {
-                    Bitmap waterMarkBitmap = BitmapUtil.loadFromAssets(ActivityCapture.this, "higo_water_mark.png", 1, Bitmap.Config.ARGB_8888);
-                    finalBitmap = BitmapUtil.makeWaterMark(finalBitmap, waterMarkBitmap);
+                Bitmap addBitmap = BitmapUtil.rotateAndScale(bitmap, _rotation, kPhotoMaxSaveSideLen);
+
+                finalBitmap = BitmapUtil.cropPhotoImage(addBitmap,cropWidth,cropHeight);
+
+//                if (makeWaterMark) {
+//                    Bitmap waterMarkBitmap = BitmapUtil.loadFromAssets(ActivityCapture.this, "higo_water_mark.png", 1, Bitmap.Config.ARGB_8888);
+//                    finalBitmap = BitmapUtil.makeWaterMark(finalBitmap, waterMarkBitmap);
+//                }
+
+                photoFile = getOutputMediaFile();
+
+                if (photoFile == null) {
+                    return;
                 }
 
-                photoFile = PathManager.getCropPhotoPath(ActivityCapture.this);
                 boolean successful = BitmapUtil.saveBitmap2file(finalBitmap, photoFile, Bitmap.CompressFormat.JPEG, 100);
+
                 while (!successful) {
                     successful = BitmapUtil.saveBitmap2file(finalBitmap, photoFile, Bitmap.CompressFormat.JPEG, 100);
                 }
+
                 displayCropImage();
             }
         };
@@ -170,6 +172,28 @@ public class ActivityCapture extends Activity implements
                 focuseView.setVisibility(View.INVISIBLE);
             }
         };
+    }
+
+
+    private static File getOutputMediaFile() {
+        // To be safe, you should check that the SDCard is mounted
+        // using Environment.getExternalStorageState() before doing this.
+        File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "MyCameraApp");
+        // This location works best if you want the created images to be shared
+        // between applications and persist after your app has been uninstalled.
+        // Create the storage directory if it does not exist
+        if (!mediaStorageDir.exists()) {
+            if (!mediaStorageDir.mkdirs()) {
+                Log.d("MyCameraApp", "failed to create directory");
+                return null;
+            }
+        }
+        // Create a media file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        File mediaFile;
+        mediaFile = new File(mediaStorageDir.getPath() + File.separator +
+                "IMG_" + timeStamp + ".jpg");
+        return mediaFile;
     }
 
     @Override
@@ -252,102 +276,7 @@ public class ActivityCapture extends Activity implements
         }
         camera.startPreview();
     }
-    //根据拍照的图片来剪裁
 
-//    private Bitmap cropPhotoImage(Bitmap bmp) {
-//        int dw = bmp.getWidth();
-//        int dh = bmp.getHeight();
-//        //		Debug.info("dw--:" + dw + " dh--:" + dh);
-//        int height;
-//        int width;
-//        if (dh > dw) {//图片竖直方向
-//            //切图片时按照竖屏来计算
-//            height = HiGo.getInstance().width;
-//            width = HiGo.getInstance().height;
-//        } else {//图片是水平方向
-//            //切图片时按照横屏来计算
-//            width = HiGo.getInstance().width;
-//            height = HiGo.getInstance().height;
-//        }
-//        //		Debug.info("height--:" + height + "  width--:" + width);
-//        Rect rect = new Rect();
-//        int left = (width - cropBorderView.getRect().height()) / 2;
-//        int top = (height - cropBorderView.getRect().width()) / 2;
-//        int right = left + cropBorderView.getRect().height();
-//        int bottom = top + cropBorderView.getRect().width();
-//        rect.set(left, top, right, bottom);
-//        //		Debug.info("left--:" + left + " top--:" + top + " right--:" + right + " bottom--:" + bottom);
-//        float scale = 1.0f;
-//        // 如果图片的宽或者高大于屏幕，则缩放至屏幕的宽或者高
-//        if (dw > width && dh <= height) {
-//            scale = width * 1.0f / dw;
-//        }
-//        if (dh > height && dw <= width) {
-//            scale = height * 1.0f / dh;
-//        }
-//        // 如果宽和高都大于屏幕，则让其按按比例适应屏幕大小
-//        if (dw > width && dh > height) {
-//            scale = Math.max(width * 1.0f / dw, height * 1.0f / dh);
-//        }
-//        //如果图片的宽度和高度都小于屏幕的宽度和高度，则放大至屏幕大小
-//        if (dw < width && dh < height) {
-//            scale = width * 1.0f / dw;
-//        }
-//        Matrix matrix = new Matrix();
-//        matrix.postScale(scale, scale);
-//        try {
-//            Bitmap b2 = Bitmap.createBitmap(bmp, 0, 0, dw, dh, matrix, true);
-//            if (null != b2 && bmp != b2) {
-//                bmp.recycle();
-//                bmp = b2;
-//            }
-//        } catch (OutOfMemoryError e) {
-//            e.printStackTrace();
-//        }
-//        //		Debug.info("b2 width--:" + bmp.getWidth() + " b2 height--:" + bmp.getHeight());
-//        try {
-//            if (rect.left + rect.width() <= bmp.getWidth()) {
-//                Bitmap b3 = Bitmap.createBitmap(bmp, rect.left, rect.top, rect.width(), rect.height());
-//                if (null != b3 && bmp != b3) {
-//                    bmp.recycle();
-//                    bmp = b3;
-//                }
-//            }
-//        } catch (OutOfMemoryError e) {
-//            e.printStackTrace();
-//        }
-//        //将图片压缩至cropWidth*cropHeight
-//        try {
-//            Bitmap b4 = Bitmap.createScaledBitmap(bmp, cropWidth, cropHeight, false);
-//            if (null != b4 && bmp != b4) {
-//                bmp.recycle();
-//                bmp = b4;
-//            }
-//        } catch (OutOfMemoryError e) {
-//            e.printStackTrace();
-//        }
-//        return bmp;
-//    }
-
-    private Bitmap cropPhotoImage(Bitmap bitmap) {
-        Bitmap result = bitmap;
-        try {
-            int bw = bitmap.getWidth();
-            int bh = bitmap.getHeight();
-            float scale = Math.max(cropWidth * 1.0f / bw, cropHeight * 1.0f / bh);
-            Bitmap cropBitmap = Bitmap.createBitmap(bitmap, (int) ((bw * scale - cropWidth) / scale / 2), (int) ((bh * scale - cropHeight) / scale / 2), (int) (cropWidth / scale), (int) (cropHeight / scale));
-            if (cropBitmap != null && cropBitmap != bitmap) {
-                bitmap.recycle();
-            }
-            result = Bitmap.createScaledBitmap(cropBitmap, cropWidth, cropHeight, false);
-            if (result != null && cropBitmap != result) {
-                cropBitmap.recycle();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return result;
-    }
 
     private void setupDevice() {
         if (android.os.Build.VERSION.SDK_INT > 8) {
@@ -429,10 +358,7 @@ public class ActivityCapture extends Activity implements
                 bnCaptureClicked();
                 break;
             case R.id.save: {
-                Intent intent = new Intent();
-                intent.putExtra(kPhotoPath, photoFile.getAbsolutePath());
-                ActivityCapture.this.setResult(RESULT_OK, intent);
-                ActivityCapture.this.finish();
+                onClickSave();
             }
             break;
             case R.id.notSave: {
@@ -440,6 +366,15 @@ public class ActivityCapture extends Activity implements
             }
             break;
         }
+    }
+
+    private void onClickSave() {
+        Intent intent = new Intent();
+        intent.putExtra(kPhotoPath, photoFile.getAbsolutePath());
+
+
+        ActivityCapture.this.setResult(RESULT_OK, intent);
+        ActivityCapture.this.finish();
     }
 
     @Override

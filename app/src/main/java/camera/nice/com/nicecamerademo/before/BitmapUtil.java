@@ -229,11 +229,6 @@ public class BitmapUtil {
         return null;
     }
 
-    public static Bitmap rotateAndScale(Bitmap b, int degrees, float maxSideLen) {
-
-        return rotateAndScale(b, degrees, maxSideLen, true);
-    }
-
     // Rotates the bitmap by the specified degree.
     // If a new bitmap is created, the original bitmap is recycled.
     public static Bitmap rotate(Bitmap b, int degrees) {
@@ -294,7 +289,7 @@ public class BitmapUtil {
         return b;
     }
 
-    public static Bitmap rotateAndScale(Bitmap b, int degrees, float maxSideLen, boolean recycle) {
+    public static Bitmap rotateAndScale(Bitmap b, int degrees, float maxSideLen) {
         if (null == b || degrees == 0 && b.getWidth() <= maxSideLen + 10 && b.getHeight() <= maxSideLen + 10) {
             return b;
         }
@@ -313,9 +308,7 @@ public class BitmapUtil {
         try {
             Bitmap b2 = Bitmap.createBitmap(b, 0, 0, b.getWidth(), b.getHeight(), m, true);
             if (null != b2 && b != b2) {
-                if (recycle) {
-                    b.recycle();
-                }
+                b.recycle();
                 b = b2;
             }
         } catch (OutOfMemoryError e) {
@@ -409,4 +402,39 @@ public class BitmapUtil {
             return null;
         }
     }
+
+    public static Bitmap rotateBitmap(Bitmap bitmap, int rotate) {
+        if (bitmap == null)
+            return null;
+
+        int w = bitmap.getWidth();
+        int h = bitmap.getHeight();
+
+        // Setting post rotate to 90
+        Matrix mtx = new Matrix();
+        mtx.postRotate(rotate);
+        return Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, true);
+    }
+
+
+    public static Bitmap cropPhotoImage(Bitmap bitmap,int cropWidth,int cropHeight) {
+        Bitmap result = bitmap;
+        try {
+            int bw = bitmap.getWidth();
+            int bh = bitmap.getHeight();
+            float scale = Math.max(cropWidth * 1.0f / bw, cropHeight * 1.0f / bh);
+            Bitmap cropBitmap = Bitmap.createBitmap(bitmap, (int) ((bw * scale - cropWidth) / scale / 2), (int) ((bh * scale - cropHeight) / scale / 2), (int) (cropWidth / scale), (int) (cropHeight / scale));
+            if (cropBitmap != null && cropBitmap != bitmap) {
+                bitmap.recycle();
+            }
+            result = Bitmap.createScaledBitmap(cropBitmap, cropWidth, cropHeight, false);
+            if (result != null && cropBitmap != result) {
+                cropBitmap.recycle();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
 }

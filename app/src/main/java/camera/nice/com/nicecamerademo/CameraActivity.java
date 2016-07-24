@@ -123,6 +123,7 @@ public class CameraActivity extends Activity {
             try {
                 FileOutputStream fos = new FileOutputStream(pictureFile);
                 fos.write(data);
+                fos.flush();
                 fos.close();
                 Intent intent = new Intent();
                 intent.putExtra(kPhotoPath, pictureFile.getAbsolutePath());
